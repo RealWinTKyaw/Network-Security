@@ -179,7 +179,7 @@ int process_command(char **args)
  */
 char *read_line_stdin(void)
 {
-  size_t buf_size = SHELL_BUFFERSIZE;           // size of the buffer
+  size_t buf_size = SHELL_BUFFERSIZE; // size of the buffer
   char *line = malloc(sizeof(char) * buf_size); // allocate memory space for the line*
   /** TASK 1 **/
   // read one line from stdin using getline()
@@ -189,12 +189,20 @@ char *read_line_stdin(void)
   // DO NOT PRINT ANYTHING TO THE OUTPUT
 
   /***** BEGIN ANSWER HERE *****/
+  size_t len = 0;
+  size_t ll = 0;
+
+  // check if char *line is not null
+  if (line != NULL)
+  {
+    ll = getline(&line, &len, stdin);
+    char *line = (unsigned char *)&ll;
+  }
 
   /*********************/
 
   return line;
 }
-
 /**
  Receives the *line, and return char** that tokenize the line
 **/
@@ -213,6 +221,20 @@ char **tokenize_line_stdin(char *line)
   // 3. Store the address to first letter of each word in the command in tokens
   // 4. Add NULL termination in tokens so we know how many "valid" addresses there are in tokens
   /***** BEGIN ANSWER HERE *****/
+  if (tokens != NULL)
+  {
+    token = strtok(line, SHELL_INPUT_DELIM);
+    int i = 0;
+    tokens[i] = token;
+    i++;
+    while (token != NULL)
+    {
+      token = strtok(NULL, SHELL_INPUT_DELIM);
+      tokens[i] = token;
+      i++;
+    }
+    tokens[i] = NULL;
+  }
 
   /*********************/
 
@@ -265,6 +287,7 @@ void main_loop(void)
   } while (status);
 }
 
+/*
 int main(int argc, char **argv)
 {
 
@@ -286,3 +309,32 @@ int main(int argc, char **argv)
 
   return 0;
 }
+
+*/
+
+int main(int argc, char **argv)
+{
+ 
+ printf("Shell Run successful. Running now: \n");
+ 
+ char* line = read_line_stdin();
+ printf("The fetched line is : %s \n", line);
+ 
+ char** args = tokenize_line_stdin(line);
+ printf("The first token is %s \n", args[0]);
+ printf("The second token is %s \n", args[1]);
+ 
+ return 0;
+}
+
+/*
+int main(int argc, char **argv)
+{
+ 
+ char* line = read_line_stdin();
+ printf("The fetched line is : %s \n", line);
+ 
+ return 0;
+}
+
+*/
