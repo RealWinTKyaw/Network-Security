@@ -166,6 +166,38 @@ int process_command(char **args)
 
   /***** BEGIN ANSWER HERE *****/
 
+  if (args[0] != NULL)
+  {
+    if (args[0] == "cd")
+    {
+      builtin_command_func[0];
+    }
+    else if (args[0] == "help")
+    {
+      builtin_command_func[1];
+    }
+    else if (args[0] == "exit")
+    {
+      builtin_command_func[2];
+    }
+    else if (args[0] == "usage")
+    {
+      builtin_command_func[3];
+    }
+    else
+    {
+      exec_sys_prog(args);
+
+      pid_t pid = fork();
+      child_exit_status = pid;
+      wait(NULL);
+    }
+  }
+  else
+  {
+    return 1;
+  }
+
   /*********************/
   if (child_exit_status != 1)
   {
@@ -179,7 +211,7 @@ int process_command(char **args)
  */
 char *read_line_stdin(void)
 {
-  size_t buf_size = SHELL_BUFFERSIZE; // size of the buffer
+  size_t buf_size = SHELL_BUFFERSIZE;           // size of the buffer
   char *line = malloc(sizeof(char) * buf_size); // allocate memory space for the line*
   /** TASK 1 **/
   // read one line from stdin using getline()
@@ -314,26 +346,37 @@ int main(int argc, char **argv)
 
 int main(int argc, char **argv)
 {
- 
- printf("Shell Run successful. Running now: \n");
- 
- char* line = read_line_stdin();
- printf("The fetched line is : %s \n", line);
- 
- char** args = tokenize_line_stdin(line);
- printf("The first token is %s \n", args[0]);
- printf("The second token is %s \n", args[1]);
- 
- return 0;
+  printf("Shell Run successful. Running now: \n");
+
+  char *line = read_line_stdin();
+  printf("The fetched line is : %s \n", line);
+
+  char **args = tokenize_line_stdin(line);
+  printf("The first token is %s \n", args[0]);
+  printf("The second token is %s \n", args[1]);
+
+  // Setup path
+  if (getcwd(output_file_path, sizeof(output_file_path)) != NULL)
+  {
+    printf("Current working dir: %s\n", output_file_path);
+  }
+  else
+  {
+    perror("getcwd() error, exiting now.");
+    return 1;
+  }
+  process_command(args);
+
+  return 0;
 }
 
 /*
 int main(int argc, char **argv)
 {
- 
+
  char* line = read_line_stdin();
  printf("The fetched line is : %s \n", line);
- 
+
  return 0;
 }
 
