@@ -168,21 +168,21 @@ int process_command(char **args)
 
   if (args[0] != NULL)
   {
-    if (args[0] == "cd")
+    if (strcmp(args[0], builtin_commands[0]) == 0)
     {
       builtin_command_func[0];
     }
-    else if (args[0] == "help")
+    else if (strcmp(*args, builtin_commands[1]) == 0)
     {
-      builtin_command_func[1];
+      shell_help;
     }
-    else if (args[0] == "exit")
+    else if (strcmp(*args, builtin_commands[2]) == 0)
     {
-      builtin_command_func[2];
+      shell_exit;
     }
-    else if (args[0] == "usage")
+    else if (strcmp(*args, builtin_commands[3]) == 0)
     {
-      builtin_command_func[3];
+      shell_usage;
     }
     else
     {
