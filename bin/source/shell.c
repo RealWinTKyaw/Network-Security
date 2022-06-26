@@ -328,13 +328,22 @@ void main_loop(void)
     fflush(stdout); // clear the buffer and move the output to the console using fflush
 
     /***** BEGIN ANSWER HERE *****/
+    line = read_line_stdin();
+    args = tokenize_line_stdin(line);
+    status = process_command(args);
     
+    free(line);
+    free(args);
+    if (status !=1)
+    {
+      break;
+    }
 
     /*********************/
   } while (status);
 }
 
-/*
+
 int main(int argc, char **argv)
 {
 
@@ -357,42 +366,4 @@ int main(int argc, char **argv)
   return 0;
 }
 
-*/
 
-int main(int argc, char **argv)
-{
-  printf("Shell Run successful. Running now: \n");
-
-  char *line = read_line_stdin();
-  printf("The fetched line is : %s \n", line);
-
-  char **args = tokenize_line_stdin(line);
-  printf("The first token is %s \n", args[0]);
-  printf("The second token is %s \n", args[1]);
-
-  // Setup path
-  if (getcwd(output_file_path, sizeof(output_file_path)) != NULL)
-  {
-    printf("Current working dir: %s\n", output_file_path);
-  }
-  else
-  {
-    perror("getcwd() error, exiting now.");
-    return 1;
-  }
-  process_command(args);
-
-  return 0;
-}
-
-/*
-int main(int argc, char **argv)
-{
-
- char* line = read_line_stdin();
- printf("The fetched line is : %s \n", line);
-
- return 0;
-}
-
-*/
