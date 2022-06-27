@@ -27,6 +27,65 @@ static int create_daemon()
     // DO NOT PRINT ANYTHING TO THE OUTPUT
     /***** BEGIN ANSWER HERE *****/
 
+    pid_t pid = 0;
+    pid_t sid = 0;
+    int fd0;
+    int fd1;
+    int fd2;
+
+    pid = fork();
+
+    if (pid < 0)
+    {
+        // Fork failed
+        exit(1);
+    }
+    else if (pid > 1)
+    {
+        // parent closed with exit(1)
+        exit(1);
+    }
+
+    // Child becomes session leader
+    sid = setsid();
+    if (sid < 0)
+    {
+        // setsid() failure
+        exit(1);
+    }
+
+    // Ignore SIGCHILD and SIGUP
+    signal(SIGCHLD, SIG_IGN);
+    signal(SIGHUP, SIG_IGN);
+
+    // second fork() WoWoWOWwwwww
+    pid = fork();
+
+    if (pid < 0)
+    {
+        // Fork failed
+        exit(1);
+    }
+    else if (pid > 1)
+    {
+        // parent closed with exit(1)
+        exit(1);
+    }
+
+    umask(0);
+
+    chdir("/");
+
+    int x;
+    for (x = sysconf(_SC_OPEN_MAX); x >= 0; x--)
+    {
+        close(x);
+    }
+
+    fd0 = open("/dev/null", O_RDWR);
+    fd1 = dup(0);
+    fd2 = dup(0);
+
     /*********************/
 
     return 0;
