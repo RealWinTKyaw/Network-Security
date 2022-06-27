@@ -26,6 +26,14 @@ int execute(char **args)
     // DO NOT PRINT ANYTHING TO THE OUTPUT
 
     /***** BEGIN ANSWER HERE *****/
+    
+    char *buffer = NULL;
+    size_t size = 0;
+    
+    while (getline(&buffer, &size, fp) != -1)
+    {
+      number_of_lines++;
+    }
 
     /*********************/
     fclose(fp); // close file.

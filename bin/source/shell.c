@@ -170,29 +170,44 @@ int process_command(char **args)
   {
     if (strcmp(args[0], builtin_commands[0]) == 0)
     {
-      builtin_command_func[0];
+      return builtin_command_func[0](args);
     }
     else if (strcmp(*args, builtin_commands[1]) == 0)
     {
-      shell_help;
+      return builtin_command_func[1](args);
     }
     else if (strcmp(*args, builtin_commands[2]) == 0)
     {
-      shell_exit;
+      return builtin_command_func[2](args);
     }
     else if (strcmp(*args, builtin_commands[3]) == 0)
     {
-      shell_usage;
+      return builtin_command_func[3](args);
     }
     else
     {
-      exec_sys_prog(args);
-
-      pid_t pid = fork();
-      child_exit_status = pid;
-      wait(NULL);
+      pid_t pid;
+      pid = fork();
+      if (pid == 0)
+      {
+        return exec_sys_prog(args);
+      }
+      else if (pid > 0)
+      {
+        int status;
+        waitpid(pid, &status, WUNTRACED);
+        if (WIFEXITED(status))
+        {
+          child_exit_status = WEXITSTATUS(status);
+        }
+      }
+      else
+      {
+        child_exit_status = -1;
+      }
     }
   }
+
   else
   {
     return 1;
@@ -313,13 +328,21 @@ void main_loop(void)
     fflush(stdout); // clear the buffer and move the output to the console using fflush
 
     /***** BEGIN ANSWER HERE *****/
-    status = shell_exit(args); // remove this line when you work on this task
+    line = read_line_stdin();
+    args = tokenize_line_stdin(line);
+    status = process_command(args);
+
+    free(line);
+    free(args);
+    if (status != 1)
+    {
+      break;
+    }
 
     /*********************/
   } while (status);
 }
 
-/*
 int main(int argc, char **argv)
 {
 
@@ -341,43 +364,3 @@ int main(int argc, char **argv)
 
   return 0;
 }
-
-*/
-
-int main(int argc, char **argv)
-{
-  printf("Shell Run successful. Running now: \n");
-
-  char *line = read_line_stdin();
-  printf("The fetched line is : %s \n", line);
-
-  char **args = tokenize_line_stdin(line);
-  printf("The first token is %s \n", args[0]);
-  printf("The second token is %s \n", args[1]);
-
-  // Setup path
-  if (getcwd(output_file_path, sizeof(output_file_path)) != NULL)
-  {
-    printf("Current working dir: %s\n", output_file_path);
-  }
-  else
-  {
-    perror("getcwd() error, exiting now.");
-    return 1;
-  }
-  process_command(args);
-
-  return 0;
-}
-
-/*
-int main(int argc, char **argv)
-{
-
- char* line = read_line_stdin();
- printf("The fetched line is : %s \n", line);
-
- return 0;
-}
-
-*/
