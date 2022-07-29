@@ -13,6 +13,20 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.backends import default_backend
 
+def read_bytes(socket, length):
+    """
+    Reads the specified length of bytes from the given socket and returns a bytestring
+    """
+    buffer = []
+    bytes_received = 0
+    while bytes_received < length:
+        data = socket.recv(min(length - bytes_received, 1024))
+        if not data:
+            raise Exception("Socket connection broken")
+        buffer.append(data)
+        bytes_received += len(data)
+
+    return b"".join(buffer)
 
 def convert_int_to_bytes(x):
     """
@@ -33,15 +47,67 @@ def main(args):
     server_address = args[1] if len(args) > 1 else "localhost"
 
     start_time = time.time()
+    auth_msg = "Hello"
+    auth_msg_bytes = bytes(auth_msg, encoding="utf8")
 
     # try:
     print("Establishing connection to server...")
+
     # Connect to server
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.connect((server_address, port))
         print("Connected")
 
+        s.sendall(convert_int_to_bytes(3))
+        s.sendall(convert_int_to_bytes(len(auth_msg_bytes)))
+        s.sendall(auth_msg_bytes)
+
         while True:
+
+            msg_len = convert_bytes_to_int(read_bytes(s, 8))
+            signed_message = read_bytes(s, msg_len)
+
+            file_len = convert_bytes_to_int(read_bytes(s, 8))
+            server_cert_raw = read_bytes(s, file_len)
+
+            # Verify the signed certificate sent by the Server using ca’s public key ( from cacsertificate.crt )
+            f = open("auth/cacsertificate.crt", "rb")
+            ca_cert_raw = f.read()
+            ca_cert = x509.load_pem_x509_certificate(
+                data=ca_cert_raw, backend=default_backend()
+            )
+            ca_public_key = ca_cert.public_key()
+
+            server_cert = x509.load_pem_x509_certificate(
+                data = server_cert_raw, backend=default_backend()
+            )
+            ca_public_key.verify(
+                signature=server_cert.signature,
+                data=server_cert.tbs_certificate_bytes,
+                padding=padding.PKCS1v15(),
+                algorithm=server_cert.signature_hash_algorithm,
+            )
+
+            # Extract server_public_key
+            server_public_key = server_cert.public_key()
+
+            # Decrypt signed message to verify it's the same message sent by the client
+            server_public_key.verify(
+                signed_message,
+                auth_msg,
+                padding.PSS(
+                    mgf=padding.MGF1(hashes.SHA256()),
+                    salt_length=padding.PSS.MAX_LENGTH,
+                ),
+                hashes.SHA256(),
+            )
+
+            # Check validity of server cert
+            assert server_cert.not_valid_before <= datetime.utcnow() <= server_cert.not_valid_after
+
+            # if check fails, close connection
+            # TODO
+
             filename = input("Enter a filename to send (enter -1 to exit):")
 
             while filename != "-1" and (not pathlib.Path(filename).is_file()):

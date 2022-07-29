@@ -93,6 +93,43 @@ def main(args):
                             print("Closing connection...")
                             s.close()
                             break
+                        case 3:
+                            auth_msg_len = convert_bytes_to_int(
+                                read_bytes(client_socket, 8)
+                            )
+                            auth_msg = read_bytes(
+                                client_socket, auth_msg_len
+                            ).decode("utf-8")
+
+                            # the server must sign it by its private key. (can be extracted from server_private_key.pem)
+                            try:
+                                with open("auth/server_private_key.pem", mode="r", encoding="utf8") as key_file:
+                                    private_key = serialization.load_pem_private_key(
+                                        bytes(key_file.read(), encoding="utf8"), password=None
+                                    )
+                                public_key = private_key.public_key()
+                            except Exception as e:
+                                print(e)
+
+                            auth_msg_bytes = bytes(auth_msg, encoding="utf8")
+                            signed_message = private_key.sign(
+                                auth_msg_bytes,
+                                padding.PSS(
+                                    mgf=padding.MGF1(hashes.SHA256()),
+                                    salt_length=padding.PSS.MAX_LENGTH,
+                                ),
+                                hashes.SHA256(),
+                            )
+
+                            # Then, the server sends both the signed message
+                            s.sendall(convert_int_to_bytes(len(auth_msg)))  # first M1
+                            s.sendall(signed_message)   # first M2
+
+                            # + server_signed.crt certificate to the client.
+                            f = open("auth/server_signed.crt", "rb")
+                            server_cert_raw = f.read()
+                            s.sendall(convert_int_to_bytes(len(server_cert_raw)))   #second M1
+                            s.sendall(server_cert_raw)  #second M2
 
     except Exception as e:
         print(e)
