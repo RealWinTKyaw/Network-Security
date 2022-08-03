@@ -66,7 +66,7 @@ def main(args):
                             filename = read_bytes(
                                 client_socket, filename_len
                             ).decode("utf-8")
-                            # print(filename)
+
                         case 1:
                             # If the packet is for transferring a chunk of the file
                             start_time = time.time()

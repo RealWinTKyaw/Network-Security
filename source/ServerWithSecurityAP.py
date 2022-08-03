@@ -1,3 +1,4 @@
+from http import client
 import pathlib
 import socket
 import sys
@@ -58,6 +59,7 @@ def main(args):
                 while True:
                     match convert_bytes_to_int(read_bytes(client_socket, 8)):
                         case 0:
+                            print("Case 0 started")
                             # If the packet is for transferring the filename
                             print("Receiving file...")
                             filename_len = convert_bytes_to_int(
@@ -68,6 +70,7 @@ def main(args):
                             ).decode("utf-8")
                             # print(filename)
                         case 1:
+                            print("Case 1 started")
                             # If the packet is for transferring a chunk of the file
                             start_time = time.time()
 
@@ -94,9 +97,12 @@ def main(args):
                             s.close()
                             break
                         case 3:
+                            print("Case 3 started")
+
                             auth_msg_len = convert_bytes_to_int(
                                 read_bytes(client_socket, 8)
                             )
+
                             auth_msg = read_bytes(
                                 client_socket, auth_msg_len
                             ).decode("utf-8")
@@ -112,6 +118,7 @@ def main(args):
                                 print(e)
 
                             auth_msg_bytes = bytes(auth_msg, encoding="utf8")
+
                             signed_message = private_key.sign(
                                 auth_msg_bytes,
                                 padding.PSS(
@@ -121,15 +128,17 @@ def main(args):
                                 hashes.SHA256(),
                             )
 
-                            # Then, the server sends both the signed message
-                            s.sendall(convert_int_to_bytes(len(auth_msg)))  # first M1
-                            s.sendall(signed_message)   # first M2
+                            client_socket.sendall(convert_int_to_bytes(
+                                len(auth_msg)))  # first M1
+                            client_socket.sendall(signed_message)   # first M2
 
-                            # + server_signed.crt certificate to the client.
                             f = open("auth/server_signed.crt", "rb")
                             server_cert_raw = f.read()
-                            s.sendall(convert_int_to_bytes(len(server_cert_raw)))   #second M1
-                            s.sendall(server_cert_raw)  #second M2
+                            client_socket.sendall(convert_int_to_bytes(
+                                len(server_cert_raw)))  # second M1
+                            client_socket.sendall(server_cert_raw)  # second M2
+
+                            print("sent back")
 
     except Exception as e:
         print(e)

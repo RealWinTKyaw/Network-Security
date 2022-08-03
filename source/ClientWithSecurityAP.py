@@ -13,6 +13,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.backends import default_backend
 
+
 def read_bytes(socket, length):
     """
     Reads the specified length of bytes from the given socket and returns a bytestring
@@ -27,6 +28,7 @@ def read_bytes(socket, length):
         bytes_received += len(data)
 
     return b"".join(buffer)
+
 
 def convert_int_to_bytes(x):
     """
@@ -45,10 +47,18 @@ def convert_bytes_to_int(xbytes):
 def main(args):
     port = int(args[0]) if len(args) > 0 else 4321
     server_address = args[1] if len(args) > 1 else "localhost"
+    address = args[1] if len(args) > 1 else "localhost"
 
     start_time = time.time()
-    auth_msg = "Hello"
+
+    ###########################################################################
+
+    # authentication message
+    auth_msg = "Hello, im possibly insane"
+    # authentication message bytes
     auth_msg_bytes = bytes(auth_msg, encoding="utf8")
+
+    ###########################################################################
 
     # try:
     print("Establishing connection to server...")
@@ -58,52 +68,48 @@ def main(args):
         s.connect((server_address, port))
         print("Connected")
 
-        s.sendall(convert_int_to_bytes(3))
-        s.sendall(convert_int_to_bytes(len(auth_msg_bytes)))
-        s.sendall(auth_msg_bytes)
-
         while True:
 
-            msg_len = convert_bytes_to_int(read_bytes(s, 8))
-            signed_message = read_bytes(s, msg_len)
+            # msg_len = convert_bytes_to_int(read_bytes(s, 8))
+            # signed_message = read_bytes(s, msg_len)
 
-            file_len = convert_bytes_to_int(read_bytes(s, 8))
-            server_cert_raw = read_bytes(s, file_len)
+            # file_len = convert_bytes_to_int(read_bytes(s, 8))
+            # server_cert_raw = read_bytes(s, file_len)
 
-            # Verify the signed certificate sent by the Server using ca’s public key ( from cacsertificate.crt )
-            f = open("auth/cacsertificate.crt", "rb")
-            ca_cert_raw = f.read()
-            ca_cert = x509.load_pem_x509_certificate(
-                data=ca_cert_raw, backend=default_backend()
-            )
-            ca_public_key = ca_cert.public_key()
+            # # Verify the signed certificate sent by the Server using ca’s public key ( from cacsertificate.crt )
+            # f = open("auth/cacsertificate.crt", "rb")
+            # ca_cert_raw = f.read()
+            # ca_cert = x509.load_pem_x509_certificate(
+            #     data=ca_cert_raw, backend=default_backend()
+            # )
+            # ca_public_key = ca_cert.public_key()
 
-            server_cert = x509.load_pem_x509_certificate(
-                data = server_cert_raw, backend=default_backend()
-            )
-            ca_public_key.verify(
-                signature=server_cert.signature,
-                data=server_cert.tbs_certificate_bytes,
-                padding=padding.PKCS1v15(),
-                algorithm=server_cert.signature_hash_algorithm,
-            )
+            # server_cert = x509.load_pem_x509_certificate(
+            #     data=server_cert_raw, backend=default_backend()
+            # )
+            # ca_public_key.verify(
+            #     signature=server_cert.signature,
+            #     data=server_cert.tbs_certificate_bytes,
+            #     padding=padding.PKCS1v15(),
+            #     algorithm=server_cert.signature_hash_algorithm,
+            # )
 
-            # Extract server_public_key
-            server_public_key = server_cert.public_key()
+            # # Extract server_public_key
+            # server_public_key = server_cert.public_key()
 
-            # Decrypt signed message to verify it's the same message sent by the client
-            server_public_key.verify(
-                signed_message,
-                auth_msg,
-                padding.PSS(
-                    mgf=padding.MGF1(hashes.SHA256()),
-                    salt_length=padding.PSS.MAX_LENGTH,
-                ),
-                hashes.SHA256(),
-            )
+            # # Decrypt signed message to verify it's the same message sent by the client
+            # server_public_key.verify(
+            #     signed_message,
+            #     auth_msg,
+            #     padding.PSS(
+            #         mgf=padding.MGF1(hashes.SHA256()),
+            #         salt_length=padding.PSS.MAX_LENGTH,
+            #     ),
+            #     hashes.SHA256(),
+            # )
 
-            # Check validity of server cert
-            assert server_cert.not_valid_before <= datetime.utcnow() <= server_cert.not_valid_after
+            # # Check validity of server cert
+            # assert server_cert.not_valid_before <= datetime.utcnow() <= server_cert.not_valid_after
 
             # if check fails, close connection
             # TODO
@@ -131,9 +137,87 @@ def main(args):
                 s.sendall(convert_int_to_bytes(len(data)))
                 s.sendall(data)
 
-        # Close the connection
-        s.sendall(convert_int_to_bytes(2))
-        print("Closing connection...")
+            # Send mode 3
+            s.sendall(convert_int_to_bytes(3))
+            # Send M1
+            s.sendall(convert_int_to_bytes(len(auth_msg_bytes)))
+            # Send M2
+            s.sendall(auth_msg_bytes)
+
+            ######################### CHECK SERVER ID ##############################
+
+            firstM1 = s.recv(4096)  # size of incoming M2 in bytes
+            firstM2 = s.recv(4096)  # signed authentication message
+
+            # size of incoming M2 in bytes (this is server_signed.crt)
+            secondM1 = s.recv(4096)
+            secondM2 = s.recv(4096)  # server_signed.crt
+
+            # Verify the signed certificate sent by the Server using ca’s public key ( from cacsertificate.crt )
+            print("Verification of server cert start...")
+            try:
+                f = open("auth/cacsertificate.crt", "rb")
+                ca_cert_raw = f.read()
+                ca_cert = x509.load_pem_x509_certificate(
+                    data=ca_cert_raw, backend=default_backend()
+                )
+                ca_public_key = ca_cert.public_key()
+                server_cert = x509.load_pem_x509_certificate(
+                    data=secondM2, backend=default_backend()
+                )
+                ca_public_key.verify(
+                    signature=server_cert.signature,
+                    data=server_cert.tbs_certificate_bytes,
+                    padding=padding.PKCS1v15(),
+                    algorithm=server_cert.signature_hash_algorithm,
+                )
+            except Exception as e:
+                print("Connection will now close due to failed check 1")
+                print(e)
+                s.close()
+            print("Verification of server cert valid")
+
+            # Extraction of server public key
+            try:
+                with open("auth/server_private_key.pem", mode="r", encoding="utf8") as key_file:
+                    private_key = serialization.load_pem_private_key(
+                        bytes(key_file.read(), encoding="utf8"), password=None
+                    )
+                public_key = private_key.public_key()
+            except Exception as e:
+                print("Connection will now close due to failed check 2")
+                print(e)
+                s.close()
+
+            # Verify signed authentication message
+            print("Verifying Authentication Message...")
+            try:
+                public_key.verify(
+                    firstM2,
+                    auth_msg_bytes,
+                    padding.PSS(
+                        mgf=padding.MGF1(hashes.SHA256()),
+                        salt_length=padding.PSS.MAX_LENGTH,
+                    ),
+                    hashes.SHA256(),
+                )
+            except Exception as e:
+                print("Connection will now close due to failed check 3")
+                print(e)
+                s.close()
+            print("Verified")
+
+            # Check server cert valid or not
+            print("Server Cert valid?")
+            try:
+                assert server_cert.not_valid_before <= datetime.utcnow() <= server_cert.not_valid_after
+            except Exception as e:
+                print("Connection will now close due to failed check 4")
+                print(e)
+                s.close()
+            print("Server Cert is valid.")
+
+            #######################################################################
 
     end_time = time.time()
     print(f"Program took {end_time - start_time}s to run.")
