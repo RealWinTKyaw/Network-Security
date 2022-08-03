@@ -80,17 +80,7 @@ def main(args):
 
             filename_bytes = bytes(filename, encoding="utf8")
 
-            # Send the filename
-            s.sendall(convert_int_to_bytes(0))
-            s.sendall(convert_int_to_bytes(len(filename_bytes)))
-            s.sendall(filename_bytes)
-
-            # Send the file
-            with open(filename, mode="rb") as fp:
-                data = fp.read()
-                s.sendall(convert_int_to_bytes(1))
-                s.sendall(convert_int_to_bytes(len(data)))
-                s.sendall(data)
+            ######################## Send mode 3 to check ##########################
 
             # Send mode 3
             s.sendall(convert_int_to_bytes(3))
@@ -176,6 +166,18 @@ def main(args):
             print("Server Cert is valid.")
 
             #######################################################################
+
+            # Send the filename
+            s.sendall(convert_int_to_bytes(0))
+            s.sendall(convert_int_to_bytes(len(filename_bytes)))
+            s.sendall(filename_bytes)
+
+            # Send the file
+            with open(filename, mode="rb") as fp:
+                data = fp.read()
+                s.sendall(convert_int_to_bytes(1))
+                s.sendall(convert_int_to_bytes(len(data)))
+                s.sendall(data)
 
     end_time = time.time()
     print(f"Program took {end_time - start_time}s to run.")
