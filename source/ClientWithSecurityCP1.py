@@ -79,6 +79,17 @@ def main(args):
                 break
 
             filename_bytes = bytes(filename, encoding="utf8")
+            try:
+                with open("auth/server_private_key.pem", mode="r", encoding="utf8") as key_file:
+                    private_key = serialization.load_pem_private_key(
+                        bytes(key_file.read(), encoding="utf8"), password=None
+                    )
+            except Exception as e:
+                print("Connection will now close due to failed check 2")
+                print(e)
+                s.close()
+
+            public_key_CP1 = private_key.public_key()
 
             # Send the filename
             s.sendall(convert_int_to_bytes(0))
@@ -88,9 +99,18 @@ def main(args):
             # Send the file
             with open(filename, mode="rb") as fp:
                 data = fp.read()
+                encrypted_data = public_key_CP1.encrypt(
+                    data,
+                    padding.OAEP(
+                        mgf=padding.MGF1(hashes.SHA256()),
+                        algorithm=hashes.SHA256(),
+                        label=None,
+                    ),
+                )
+
                 s.sendall(convert_int_to_bytes(1))
-                s.sendall(convert_int_to_bytes(len(data)))
-                s.sendall(data)
+                s.sendall(convert_int_to_bytes(len(encrypted_data)))
+                s.sendall(encrypted_data)
 
             # Send mode 3
             s.sendall(convert_int_to_bytes(3))
@@ -133,16 +153,7 @@ def main(args):
             print("Verification of server cert valid")
 
             # Extraction of server public key
-            try:
-                with open("auth/server_private_key.pem", mode="r", encoding="utf8") as key_file:
-                    private_key = serialization.load_pem_private_key(
-                        bytes(key_file.read(), encoding="utf8"), password=None
-                    )
-                public_key = private_key.public_key()
-            except Exception as e:
-                print("Connection will now close due to failed check 2")
-                print(e)
-                s.close()
+            public_key = private_key.public_key()
 
             # Verify signed authentication message
             print("Verifying Authentication Message...")

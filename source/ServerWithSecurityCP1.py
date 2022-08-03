@@ -48,6 +48,14 @@ def read_bytes(socket, length):
 def main(args):
     port = int(args[0]) if len(args) > 0 else 4321
     address = args[1] if len(args) > 1 else "localhost"
+    try:
+        with open("auth/server_private_key.pem", mode="r", encoding="utf8") as key_file:
+            private_key = serialization.load_pem_private_key(
+                bytes(key_file.read(), encoding="utf8"), password=None
+            )
+        public_key = private_key.public_key()
+    except Exception as e:
+        print(e)
 
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -78,7 +86,19 @@ def main(args):
                                 read_bytes(client_socket, 8)
                             )
                             file_data = read_bytes(client_socket, file_len)
-                            # print(file_data)
+
+                            # Decryption of encrypted message
+                            print("Decryption Started")
+                            decrypted_data = private_key.decrypt(
+                                file_data,  # in bytes
+                                padding.OAEP(      # padding should match whatever used during encryption
+                                    mgf=padding.MGF1(hashes.SHA256()),
+                                    algorithm=hashes.SHA256(),
+                                    label=None,
+                                ),
+                            )
+                            print("Decryption Ended")
+                            # End of decryption, output it to write
 
                             filename = "recv_" + filename.split("/")[-1]
 
@@ -86,7 +106,7 @@ def main(args):
                             with open(
                                 f"recv_files/{filename}", mode="wb"
                             ) as fp:
-                                fp.write(file_data)
+                                fp.write(decrypted_data)
                             print(
                                 f"Finished receiving file in {(time.time() - start_time)}s!"
                             )
@@ -108,15 +128,6 @@ def main(args):
                             ).decode("utf-8")
 
                             # the server must sign it by its private key. (can be extracted from server_private_key.pem)
-                            try:
-                                with open("auth/server_private_key.pem", mode="r", encoding="utf8") as key_file:
-                                    private_key = serialization.load_pem_private_key(
-                                        bytes(key_file.read(), encoding="utf8"), password=None
-                                    )
-                                public_key = private_key.public_key()
-                            except Exception as e:
-                                print(e)
-
                             auth_msg_bytes = bytes(auth_msg, encoding="utf8")
 
                             signed_message = private_key.sign(
