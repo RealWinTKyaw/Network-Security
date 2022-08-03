@@ -129,7 +129,8 @@ def main(args):
             except Exception as e:
                 print("Connection will now close due to failed check 1")
                 print(e)
-                s.close()
+                s.sendall(convert_int_to_bytes(2))
+
             print("Verification of server cert valid")
 
             # Extraction of server public key
@@ -142,7 +143,7 @@ def main(args):
             except Exception as e:
                 print("Connection will now close due to failed check 2")
                 print(e)
-                s.close()
+                s.sendall(convert_int_to_bytes(2))
 
             # Verify signed authentication message
             print("Verifying Authentication Message...")
@@ -159,7 +160,8 @@ def main(args):
             except Exception as e:
                 print("Connection will now close due to failed check 3")
                 print(e)
-                s.close()
+                s.sendall(convert_int_to_bytes(2))
+
             print("Verified")
 
             # Check server cert valid or not
@@ -169,7 +171,8 @@ def main(args):
             except Exception as e:
                 print("Connection will now close due to failed check 4")
                 print(e)
-                s.close()
+                s.sendall(convert_int_to_bytes(2))
+
             print("Server Cert is valid.")
 
             #######################################################################
