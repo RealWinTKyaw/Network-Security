@@ -69,51 +69,6 @@ def main(args):
         print("Connected")
 
         while True:
-
-            # msg_len = convert_bytes_to_int(read_bytes(s, 8))
-            # signed_message = read_bytes(s, msg_len)
-
-            # file_len = convert_bytes_to_int(read_bytes(s, 8))
-            # server_cert_raw = read_bytes(s, file_len)
-
-            # # Verify the signed certificate sent by the Server using ca’s public key ( from cacsertificate.crt )
-            # f = open("auth/cacsertificate.crt", "rb")
-            # ca_cert_raw = f.read()
-            # ca_cert = x509.load_pem_x509_certificate(
-            #     data=ca_cert_raw, backend=default_backend()
-            # )
-            # ca_public_key = ca_cert.public_key()
-
-            # server_cert = x509.load_pem_x509_certificate(
-            #     data=server_cert_raw, backend=default_backend()
-            # )
-            # ca_public_key.verify(
-            #     signature=server_cert.signature,
-            #     data=server_cert.tbs_certificate_bytes,
-            #     padding=padding.PKCS1v15(),
-            #     algorithm=server_cert.signature_hash_algorithm,
-            # )
-
-            # # Extract server_public_key
-            # server_public_key = server_cert.public_key()
-
-            # # Decrypt signed message to verify it's the same message sent by the client
-            # server_public_key.verify(
-            #     signed_message,
-            #     auth_msg,
-            #     padding.PSS(
-            #         mgf=padding.MGF1(hashes.SHA256()),
-            #         salt_length=padding.PSS.MAX_LENGTH,
-            #     ),
-            #     hashes.SHA256(),
-            # )
-
-            # # Check validity of server cert
-            # assert server_cert.not_valid_before <= datetime.utcnow() <= server_cert.not_valid_after
-
-            # if check fails, close connection
-            # TODO
-
             filename = input("Enter a filename to send (enter -1 to exit):")
 
             while filename != "-1" and (not pathlib.Path(filename).is_file()):
