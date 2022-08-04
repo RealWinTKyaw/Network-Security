@@ -193,7 +193,13 @@ def main(args):
             with open(filename, mode="rb") as fp:
                 data = fp.read()
             encrypted_data = session_key.encrypt(data)
-
+            
+            filename = "enc_" + filename.split("/")[-1]
+            with open(
+                f"send_files_enc/{filename}", mode="wb"
+            ) as fp:
+                fp.write(encrypted_data)
+                
             s.sendall(convert_int_to_bytes(1))
             s.sendall(convert_int_to_bytes(len(encrypted_data)))
             s.sendall(encrypted_data)

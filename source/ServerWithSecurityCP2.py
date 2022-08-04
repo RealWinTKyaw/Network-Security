@@ -86,7 +86,13 @@ def main(args):
                                 read_bytes(client_socket, 8)
                             )
                             file_data = read_bytes(client_socket, file_len)
-
+                            
+                            filename_enc = "enc_recv_" + filename.split("/")[-1]
+                            with open(
+                                f"recv_files_enc/{filename_enc}", mode="wb"
+                            ) as fp:
+                                fp.write(file_data)
+                                
                             # Decryption of encrypted message
                             print("Decryption Started")
                             decrypted_data = session_key.decrypt(file_data)
@@ -122,6 +128,15 @@ def main(args):
                             ).decode("utf-8")
 
                             # the server must sign it by its private key. (can be extracted from server_private_key.pem)
+                            try:
+                                with open("auth/server_private_key.pem", mode="r", encoding="utf8") as key_file:
+                                    private_key = serialization.load_pem_private_key(
+                                        bytes(key_file.read(), encoding="utf8"), password=None
+                                    )
+                                public_key = private_key.public_key()
+                            except Exception as e:
+                                print(e)
+                                
                             auth_msg_bytes = bytes(auth_msg, encoding="utf8")
 
                             signed_message = private_key.sign(
@@ -149,18 +164,20 @@ def main(args):
                                 read_bytes(client_socket, 8)
                             )
                             
-                            session_key_bytes = read_bytes(
+                            session_key_bytes_enc = read_bytes(
                                 client_socket, session_key_bytes_len
-                            ).decode("utf-8")
+                            )
 
-                            session_key = private_key.decrypt(
-                                session_key_bytes, # in bytes
+                            session_key_bytes = private_key.decrypt(
+                                session_key_bytes_enc, # in bytes
                                 padding.OAEP(      # padding should match whatever used during encryption
                                 mgf=padding.MGF1(hashes.SHA256()),
                                 algorithm=hashes.SHA256(),
                                 label=None,
                                 ),
                             )
+                            session_key = Fernet(session_key_bytes)
+                            print("session key received")
 
     except Exception as e:
         print(e)

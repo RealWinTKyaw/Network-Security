@@ -78,7 +78,7 @@ def main(args):
                             ).decode("utf-8")
                             # print(filename)
                         case 1:
-                            print("Case 1 started")
+                            print("Case 1 started")                          
                             # If the packet is for transferring a chunk of the file
                             start_time = time.time()
 
@@ -87,6 +87,12 @@ def main(args):
                             )
                             file_data = read_bytes(client_socket, file_len)
 
+                            filename_enc = "enc_recv_" + filename.split("/")[-1]
+                            with open(
+                                f"recv_files_enc/{filename_enc}", mode="wb"
+                            ) as fp:
+                                fp.write(file_data)
+                                
                             # Decryption of encrypted message
                             print("Decryption Started")
                             decrypted_data = private_key.decrypt(
@@ -127,7 +133,16 @@ def main(args):
                                 client_socket, auth_msg_len
                             ).decode("utf-8")
 
-                            # the server must sign it by its private key. (can be extracted from server_private_key.pem)
+                            # the server must sign it by its private key. (can be extracted from server_private_key.pem)                        
+                            try:
+                                with open("auth/server_private_key.pem", mode="r", encoding="utf8") as key_file:
+                                    private_key = serialization.load_pem_private_key(
+                                        bytes(key_file.read(), encoding="utf8"), password=None
+                                    )
+                                public_key = private_key.public_key()
+                            except Exception as e:
+                                print(e)
+                                
                             auth_msg_bytes = bytes(auth_msg, encoding="utf8")
 
                             signed_message = private_key.sign(

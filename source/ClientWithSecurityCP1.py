@@ -117,12 +117,13 @@ def main(args):
                 with open("auth/server_private_key.pem", mode="r", encoding="utf8") as key_file:
                     private_key = serialization.load_pem_private_key(
                         bytes(key_file.read(), encoding="utf8"), password=None
-                    )
-                public_key = private_key.public_key()
+                    )            
             except Exception as e:
                 print("Connection will now close due to failed check 2")
                 print(e)
                 s.sendall(convert_int_to_bytes(2))
+                
+            public_key = private_key.public_key()
 
             # Verify signed authentication message
             print("Verifying Authentication Message...")
@@ -183,10 +184,16 @@ def main(args):
                         label=None,
                     ),
                 )
+                
+            filename = "enc_" + filename.split("/")[-1]
+            with open(
+                f"send_files_enc/{filename}", mode="wb"
+            ) as fp:
+                fp.write(encrypted_data)
 
-                s.sendall(convert_int_to_bytes(1))
-                s.sendall(convert_int_to_bytes(len(encrypted_data)))
-                s.sendall(encrypted_data)
+            s.sendall(convert_int_to_bytes(1))
+            s.sendall(convert_int_to_bytes(len(encrypted_data)))
+            s.sendall(encrypted_data)
 
     end_time = time.time()
     print(f"Program took {end_time - start_time}s to run.")
