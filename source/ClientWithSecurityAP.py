@@ -69,17 +69,6 @@ def main(args):
         print("Connected")
 
         while True:
-            filename = input("Enter a filename to send (enter -1 to exit):")
-
-            while filename != "-1" and (not pathlib.Path(filename).is_file()):
-                filename = input("Invalid filename. Please try again:")
-
-            if filename == "-1":
-                s.sendall(convert_int_to_bytes(2))
-                break
-
-            filename_bytes = bytes(filename, encoding="utf8")
-
             ######################## Send mode 3 to check ##########################
 
             # Send mode 3
@@ -166,6 +155,17 @@ def main(args):
             print("Server Cert is valid.")
 
             #######################################################################
+            
+            filename = input("Enter a filename to send (enter -1 to exit):")
+
+            while filename != "-1" and (not pathlib.Path(filename).is_file()):
+                filename = input("Invalid filename. Please try again:")
+
+            if filename == "-1":
+                s.sendall(convert_int_to_bytes(2))
+                break
+
+            filename_bytes = bytes(filename, encoding="utf8")
 
             # Send the filename
             s.sendall(convert_int_to_bytes(0))

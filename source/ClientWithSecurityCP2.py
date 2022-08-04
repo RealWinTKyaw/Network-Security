@@ -156,6 +156,23 @@ def main(args):
 
             #######################################################################
 
+            # Generate a session key
+            session_key_bytes = Fernet.generate_key()
+            session_key = Fernet(session_key_bytes)
+
+            # Begin CP2 MODE 4
+            s.sendall(convert_int_to_bytes(4))
+            encrypted_session_key_bytes = public_key.encrypt(
+                session_key_bytes,
+                padding.OAEP(
+                    mgf=padding.MGF1(hashes.SHA256()),
+                    algorithm=hashes.SHA256(),
+                    label=None,
+                ),
+            )
+            s.sendall(convert_int_to_bytes(len(encrypted_session_key_bytes)))
+            s.sendall(encrypted_session_key_bytes)
+
             filename = input("Enter a filename to send (enter -1 to exit):")
 
             while filename != "-1" and (not pathlib.Path(filename).is_file()):
@@ -175,18 +192,11 @@ def main(args):
             # Send the file
             with open(filename, mode="rb") as fp:
                 data = fp.read()
-                encrypted_data = public_key.encrypt(
-                    data,
-                    padding.OAEP(
-                        mgf=padding.MGF1(hashes.SHA256()),
-                        algorithm=hashes.SHA256(),
-                        label=None,
-                    ),
-                )
+            encrypted_data = session_key.encrypt(data)
 
-                s.sendall(convert_int_to_bytes(1))
-                s.sendall(convert_int_to_bytes(len(encrypted_data)))
-                s.sendall(encrypted_data)
+            s.sendall(convert_int_to_bytes(1))
+            s.sendall(convert_int_to_bytes(len(encrypted_data)))
+            s.sendall(encrypted_data)
 
     end_time = time.time()
     print(f"Program took {end_time - start_time}s to run.")
