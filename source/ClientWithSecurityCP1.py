@@ -65,9 +65,10 @@ def main(args):
     ###########################################################################
 
     # authentication message
-    auth_msg = "Hello, im possibly insane"
+    nonce = secrets.token_urlsafe()
+
     # authentication message bytes
-    auth_msg_bytes = bytes(auth_msg, encoding="utf8")
+    auth_msg_bytes = bytes(nonce, encoding="utf8")
 
     ###########################################################################
 
