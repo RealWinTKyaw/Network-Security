@@ -199,6 +199,13 @@ def main(args):
                             label=None,
                         ),
                     )
+
+                    filename = "enc_" + filename.split("/")[-1]
+                    with open(
+                        f"send_files_enc/{filename}", mode="wb"
+                    ) as fp:
+                        fp.write(encrypted_data)
+
                     s.sendall(convert_int_to_bytes(1))
                     s.sendall(convert_int_to_bytes(len(encrypted_data)))
                     s.sendall(encrypted_data)
@@ -219,15 +226,15 @@ def main(args):
                         )
                         to_send += encrypted_data
 
+                    filename = "enc_" + filename.split("/")[-1]
+                    with open(
+                        f"send_files_enc/{filename}", mode="wb"
+                    ) as fp:
+                        fp.write(to_send)
+
                     s.sendall(convert_int_to_bytes(1))
                     s.sendall(convert_int_to_bytes(len(to_send)))
                     s.sendall(to_send)
-
-            filename = "enc_" + filename.split("/")[-1]
-            with open(
-                f"send_files_enc/{filename}", mode="wb"
-            ) as fp:
-                fp.write(encrypted_data)
 
     end_time = time.time()
     print(f"Program took {end_time - start_time}s to run.")
