@@ -78,7 +78,7 @@ def main(args):
                             ).decode("utf-8")
                             # print(filename)
                         case 1:
-                            print("Case 1 started")                          
+                            print("Case 1 started")
                             # If the packet is for transferring a chunk of the file
                             start_time = time.time()
 
@@ -87,32 +87,41 @@ def main(args):
                             )
                             file_data = read_bytes(client_socket, file_len)
 
-                            filename_enc = "enc_recv_" + filename.split("/")[-1]
+                            filename_enc = "enc_recv_" + \
+                                filename.split("/")[-1]
                             with open(
                                 f"recv_files_enc/{filename_enc}", mode="wb"
                             ) as fp:
                                 fp.write(file_data)
-                                
+
                             # Decryption of encrypted message
                             print("Decryption Started")
-                            decrypted_data = private_key.decrypt(
-                                file_data,  # in bytes
-                                padding.OAEP(      # padding should match whatever used during encryption
-                                    mgf=padding.MGF1(hashes.SHA256()),
-                                    algorithm=hashes.SHA256(),
-                                    label=None,
-                                ),
-                            )
+
+                            n = 128
+                            split_file_data = [file_data[i:i+n]
+                                               for i in range(0, len(file_data), n)]
+
+                            to_write = b''
+
+                            for i in split_file_data:
+                                decrypted_data = private_key.decrypt(
+                                    i,  # in bytes
+                                    padding.OAEP(      # padding should match whatever used during encryption
+                                        mgf=padding.MGF1(hashes.SHA256()),
+                                        algorithm=hashes.SHA256(),
+                                        label=None,
+                                    ),
+                                )
+                                to_write += decrypted_data
+
                             print("Decryption Ended")
                             # End of decryption, output it to write
 
                             filename = "recv_" + filename.split("/")[-1]
 
                             # Write the file with 'recv_' prefix
-                            with open(
-                                f"recv_files/{filename}", mode="wb"
-                            ) as fp:
-                                fp.write(decrypted_data)
+                            with open(f"recv_files/{filename}", mode='wb') as fp:
+                                fp.write(to_write)
                             print(
                                 f"Finished receiving file in {(time.time() - start_time)}s!"
                             )
@@ -133,7 +142,7 @@ def main(args):
                                 client_socket, auth_msg_len
                             ).decode("utf-8")
 
-                            # the server must sign it by its private key. (can be extracted from server_private_key.pem)                        
+                            # the server must sign it by its private key. (can be extracted from server_private_key.pem)
                             try:
                                 with open("auth/server_private_key.pem", mode="r", encoding="utf8") as key_file:
                                     private_key = serialization.load_pem_private_key(
@@ -142,7 +151,7 @@ def main(args):
                                 public_key = private_key.public_key()
                             except Exception as e:
                                 print(e)
-                                
+
                             auth_msg_bytes = bytes(auth_msg, encoding="utf8")
 
                             signed_message = private_key.sign(
@@ -163,8 +172,6 @@ def main(args):
                             client_socket.sendall(convert_int_to_bytes(
                                 len(server_cert_raw)))  # second M1
                             client_socket.sendall(server_cert_raw)  # second M2
-
-                            print("sent back")
 
     except Exception as e:
         print(e)

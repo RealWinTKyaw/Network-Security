@@ -50,6 +50,17 @@ def main(args):
     address = args[1] if len(args) > 1 else "localhost"
 
     start_time = time.time()
+    try:
+        with open("auth/server_private_key.pem", mode="r", encoding="utf8") as key_file:
+            private_key = serialization.load_pem_private_key(
+                bytes(key_file.read(), encoding="utf8"), password=None
+            )
+    except Exception as e:
+        print("Connection will now close due to failed check 2")
+        print(e)
+        s.sendall(convert_int_to_bytes(2))
+
+    public_key = private_key.public_key()
 
     ###########################################################################
 
@@ -117,12 +128,12 @@ def main(args):
                 with open("auth/server_private_key.pem", mode="r", encoding="utf8") as key_file:
                     private_key = serialization.load_pem_private_key(
                         bytes(key_file.read(), encoding="utf8"), password=None
-                    )            
+                    )
             except Exception as e:
                 print("Connection will now close due to failed check 2")
                 print(e)
                 s.sendall(convert_int_to_bytes(2))
-                
+
             public_key = private_key.public_key()
 
             # Verify signed authentication message
@@ -166,6 +177,7 @@ def main(args):
                 s.sendall(convert_int_to_bytes(2))
                 break
 
+            # number of bytes of filename
             filename_bytes = bytes(filename, encoding="utf8")
 
             # Send the filename
@@ -175,25 +187,47 @@ def main(args):
 
             # Send the file
             with open(filename, mode="rb") as fp:
+                #This is already in bytestring
                 data = fp.read()
-                encrypted_data = public_key.encrypt(
-                    data,
-                    padding.OAEP(
-                        mgf=padding.MGF1(hashes.SHA256()),
-                        algorithm=hashes.SHA256(),
-                        label=None,
-                    ),
-                )
-                
+
+                if len(data) < 60:
+                    encrypted_data = public_key.encrypt(
+                        data,
+                        padding.OAEP(
+                            mgf=padding.MGF1(hashes.SHA256()),
+                            algorithm=hashes.SHA256(),
+                            label=None,
+                        ),
+                    )
+                    s.sendall(convert_int_to_bytes(1))
+                    s.sendall(convert_int_to_bytes(len(encrypted_data)))
+                    s.sendall(encrypted_data)
+                else:
+                    n = 60
+                    split_data = [data[i:i+n] for i in range(0, len(data), n)]
+
+                    to_send = b''
+
+                    for i in split_data:
+                        encrypted_data = public_key.encrypt(
+                            i,
+                            padding.OAEP(
+                                mgf=padding.MGF1(hashes.SHA256()),
+                                algorithm=hashes.SHA256(),
+                                label=None,
+                            ),
+                        )
+                        to_send += encrypted_data
+
+                    s.sendall(convert_int_to_bytes(1))
+                    s.sendall(convert_int_to_bytes(len(to_send)))
+                    s.sendall(to_send)
+
             filename = "enc_" + filename.split("/")[-1]
             with open(
                 f"send_files_enc/{filename}", mode="wb"
             ) as fp:
                 fp.write(encrypted_data)
-
-            s.sendall(convert_int_to_bytes(1))
-            s.sendall(convert_int_to_bytes(len(encrypted_data)))
-            s.sendall(encrypted_data)
 
     end_time = time.time()
     print(f"Program took {end_time - start_time}s to run.")
