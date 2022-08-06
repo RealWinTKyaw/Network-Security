@@ -53,13 +53,6 @@ def main(args):
 
     ###########################################################################
 
-    # authentication message
-    auth_msg = "Hello, im possibly insane"
-    # authentication message bytes
-    auth_msg_bytes = bytes(auth_msg, encoding="utf8")
-
-    ###########################################################################
-
     # try:
     print("Establishing connection to server...")
 
@@ -67,6 +60,12 @@ def main(args):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.connect((server_address, port))
         print("Connected")
+
+        # authentication message
+        nonce = secrets.token_urlsafe()
+
+        # authentication message bytes
+        auth_msg_bytes = bytes(nonce, encoding="utf8")
 
         while True:
             ######################## Send mode 3 to check ##########################
@@ -82,6 +81,10 @@ def main(args):
 
             firstM1 = s.recv(4096)  # size of incoming M2 in bytes
             firstM2 = s.recv(4096)  # signed authentication message
+
+            if firstM2 != nonce:
+                s.sendall(convert_int_to_bytes(2))
+                break
 
             # size of incoming M2 in bytes (this is server_signed.crt)
             secondM1 = s.recv(4096)
@@ -109,6 +112,7 @@ def main(args):
                 print("Connection will now close due to failed check 1")
                 print(e)
                 s.sendall(convert_int_to_bytes(2))
+                break
 
             print("Verification of server cert valid")
 
@@ -123,6 +127,7 @@ def main(args):
                 print("Connection will now close due to failed check 2")
                 print(e)
                 s.sendall(convert_int_to_bytes(2))
+                break
 
             # Verify signed authentication message
             print("Verifying Authentication Message...")
@@ -140,6 +145,7 @@ def main(args):
                 print("Connection will now close due to failed check 3")
                 print(e)
                 s.sendall(convert_int_to_bytes(2))
+                break
 
             print("Verified")
 
@@ -151,6 +157,7 @@ def main(args):
                 print("Connection will now close due to failed check 4")
                 print(e)
                 s.sendall(convert_int_to_bytes(2))
+                break
 
             print("Server Cert is valid.")
 

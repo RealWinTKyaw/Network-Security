@@ -50,25 +50,6 @@ def main(args):
     address = args[1] if len(args) > 1 else "localhost"
 
     start_time = time.time()
-    try:
-        with open("auth/server_private_key.pem", mode="r", encoding="utf8") as key_file:
-            private_key = serialization.load_pem_private_key(
-                bytes(key_file.read(), encoding="utf8"), password=None
-            )
-    except Exception as e:
-        print("Connection will now close due to failed check 2")
-        print(e)
-        s.sendall(convert_int_to_bytes(2))
-
-    public_key = private_key.public_key()
-
-    ###########################################################################
-
-    # authentication message
-    nonce = secrets.token_urlsafe()
-
-    # authentication message bytes
-    auth_msg_bytes = bytes(nonce, encoding="utf8")
 
     ###########################################################################
 
@@ -79,6 +60,12 @@ def main(args):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.connect((server_address, port))
         print("Connected")
+        
+        # authentication message
+        nonce = secrets.token_urlsafe()
+
+        # authentication message bytes
+        auth_msg_bytes = bytes(nonce, encoding="utf8")
 
         while True:
             ######################## Send mode 3 to check ##########################
@@ -94,6 +81,10 @@ def main(args):
 
             firstM1 = s.recv(4096)  # size of incoming M2 in bytes
             firstM2 = s.recv(4096)  # signed authentication message
+
+            if firstM2 != nonce:
+                s.sendall(convert_int_to_bytes(2))
+                break
 
             # size of incoming M2 in bytes (this is server_signed.crt)
             secondM1 = s.recv(4096)
@@ -121,6 +112,7 @@ def main(args):
                 print("Connection will now close due to failed check 1")
                 print(e)
                 s.sendall(convert_int_to_bytes(2))
+                break
 
             print("Verification of server cert valid")
 
@@ -134,6 +126,7 @@ def main(args):
                 print("Connection will now close due to failed check 2")
                 print(e)
                 s.sendall(convert_int_to_bytes(2))
+                break
 
             public_key = private_key.public_key()
 
@@ -153,6 +146,7 @@ def main(args):
                 print("Connection will now close due to failed check 3")
                 print(e)
                 s.sendall(convert_int_to_bytes(2))
+                break
 
             print("Verified")
 
@@ -164,6 +158,7 @@ def main(args):
                 print("Connection will now close due to failed check 4")
                 print(e)
                 s.sendall(convert_int_to_bytes(2))
+                break
 
             print("Server Cert is valid.")
 
