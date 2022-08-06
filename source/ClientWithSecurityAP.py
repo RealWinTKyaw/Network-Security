@@ -67,98 +67,95 @@ def main(args):
         # authentication message bytes
         auth_msg_bytes = bytes(nonce, encoding="utf8")
 
-        while True:
-            ######################## Send mode 3 to check ##########################
+        ######################## Send mode 3 to check ##########################
 
-            # Send mode 3
-            s.sendall(convert_int_to_bytes(3))
-            # Send M1
-            s.sendall(convert_int_to_bytes(len(auth_msg_bytes)))
-            # Send M2
-            s.sendall(auth_msg_bytes)
+        # Send mode 3
+        s.sendall(convert_int_to_bytes(3))
+        # Send M1
+        s.sendall(convert_int_to_bytes(len(auth_msg_bytes)))
+        # Send M2
+        s.sendall(auth_msg_bytes)
 
-            ######################### CHECK SERVER ID ##############################
+        ######################### CHECK SERVER ID ##############################
 
-            firstM1 = s.recv(4096)  # size of incoming M2 in bytes
-            firstM2 = s.recv(4096)  # signed authentication message
+        firstM1 = s.recv(4096)  # size of incoming M2 in bytes
+        firstM2 = s.recv(4096)  # signed authentication message
 
-            # size of incoming M2 in bytes (this is server_signed.crt)
-            secondM1 = s.recv(4096)
-            secondM2 = s.recv(4096)  # server_signed.crt
+        # size of incoming M2 in bytes (this is server_signed.crt)
+        secondM1 = s.recv(4096)
+        secondM2 = s.recv(4096)  # server_signed.crt
 
-            # Verify the signed certificate sent by the Server using ca’s public key ( from cacsertificate.crt )
-            print("Verification of server cert start...")
-            try:
-                f = open("auth/cacsertificate.crt", "rb")
-                ca_cert_raw = f.read()
-                ca_cert = x509.load_pem_x509_certificate(
-                    data=ca_cert_raw, backend=default_backend()
+        # Verify the signed certificate sent by the Server using ca’s public key ( from cacsertificate.crt )
+        print("Verification of server cert start...")
+        try:
+            f = open("auth/cacsertificate.crt", "rb")
+            ca_cert_raw = f.read()
+            ca_cert = x509.load_pem_x509_certificate(
+                data=ca_cert_raw, backend=default_backend()
+            )
+            ca_public_key = ca_cert.public_key()
+            server_cert = x509.load_pem_x509_certificate(
+                data=secondM2, backend=default_backend()
+            )
+            ca_public_key.verify(
+                signature=server_cert.signature,
+                data=server_cert.tbs_certificate_bytes,
+                padding=padding.PKCS1v15(),
+                algorithm=server_cert.signature_hash_algorithm,
+            )
+        except Exception as e:
+            print("Connection will now close due to failed check 1")
+            print(e)
+            s.close()
+
+        print("Verification of server cert valid")
+
+        # Extraction of server public key
+        try:
+            with open("auth/server_private_key.pem", mode="r", encoding="utf8") as key_file:
+                private_key = serialization.load_pem_private_key(
+                    bytes(key_file.read(), encoding="utf8"), password=None
                 )
-                ca_public_key = ca_cert.public_key()
-                server_cert = x509.load_pem_x509_certificate(
-                    data=secondM2, backend=default_backend()
-                )
-                ca_public_key.verify(
-                    signature=server_cert.signature,
-                    data=server_cert.tbs_certificate_bytes,
-                    padding=padding.PKCS1v15(),
-                    algorithm=server_cert.signature_hash_algorithm,
-                )
-            except Exception as e:
-                print("Connection will now close due to failed check 1")
-                print(e)
-                s.sendall(convert_int_to_bytes(2))
-                break
+            public_key = private_key.public_key()
+        except Exception as e:
+            print("Connection will now close due to failed check 2")
+            print(e)
+            s.close()
 
-            print("Verification of server cert valid")
+        # Verify signed authentication message
+        print("Verifying Authentication Message...")
+        try:
+            public_key.verify(
+                firstM2,
+                auth_msg_bytes,
+                padding.PSS(
+                    mgf=padding.MGF1(hashes.SHA256()),
+                    salt_length=padding.PSS.MAX_LENGTH,
+                ),
+                hashes.SHA256(),
+            )
+        except Exception as e:
+            print("Connection will now close due to failed check 3")
+            print(e)
+            s.close()
 
-            # Extraction of server public key
-            try:
-                with open("auth/server_private_key.pem", mode="r", encoding="utf8") as key_file:
-                    private_key = serialization.load_pem_private_key(
-                        bytes(key_file.read(), encoding="utf8"), password=None
-                    )
-                public_key = private_key.public_key()
-            except Exception as e:
-                print("Connection will now close due to failed check 2")
-                print(e)
-                s.sendall(convert_int_to_bytes(2))
-                break
+        print("Verified")
 
-            # Verify signed authentication message
-            print("Verifying Authentication Message...")
-            try:
-                public_key.verify(
-                    firstM2,
-                    auth_msg_bytes,
-                    padding.PSS(
-                        mgf=padding.MGF1(hashes.SHA256()),
-                        salt_length=padding.PSS.MAX_LENGTH,
-                    ),
-                    hashes.SHA256(),
-                )
-            except Exception as e:
-                print("Connection will now close due to failed check 3")
-                print(e)
-                s.sendall(convert_int_to_bytes(2))
-                break
+        # Check server cert valid or not
+        print("Server Cert valid?")
+        try:
+            assert server_cert.not_valid_before <= datetime.utcnow() <= server_cert.not_valid_after
+        except Exception as e:
+            print("Connection will now close due to failed check 4")
+            print(e)
+            s.close()
 
-            print("Verified")
+        print("Server Cert is valid.")
 
-            # Check server cert valid or not
-            print("Server Cert valid?")
-            try:
-                assert server_cert.not_valid_before <= datetime.utcnow() <= server_cert.not_valid_after
-            except Exception as e:
-                print("Connection will now close due to failed check 4")
-                print(e)
-                s.sendall(convert_int_to_bytes(2))
-                break
-
-            print("Server Cert is valid.")
-
-            #######################################################################
+        #######################################################################
             
+        while True:
+                    
             filename = input("Enter a filename to send (enter -1 to exit):")
 
             while filename != "-1" and (not pathlib.Path(filename).is_file()):
