@@ -82,10 +82,6 @@ def main(args):
             firstM1 = s.recv(4096)  # size of incoming M2 in bytes
             firstM2 = s.recv(4096)  # signed authentication message
 
-            if firstM2 != nonce:
-                s.sendall(convert_int_to_bytes(2))
-                break
-
             # size of incoming M2 in bytes (this is server_signed.crt)
             secondM1 = s.recv(4096)
             secondM2 = s.recv(4096)  # server_signed.crt
